@@ -1,0 +1,1821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dijkstra's Algorithm Simulator — Bahrain Road Network</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg-0: #0a0e1a;
+    --bg-1: #0f1524;
+    --bg-2: #161d33;
+    --bg-3: #1e2740;
+    --bg-4: #283150;
+    --line: #283150;
+    --line-2: rgba(255,255,255,0.14);
+    --text-0: #f5f7ff;
+    --text-1: #c7cde0;
+    --text-2: #8b94b3;
+    --text-3: #5a6285;
+    --accent: #6c8cff;
+    --accent-2: #9d6cff;
+    --accent-3: #ff8a6c;
+    --green: #34d399;
+    --yellow: #fbbf24;
+    --red: #f87171;
+    --blue: #60a5fa;
+    --cyan: #22d3ee;
+    --orange: #fb923c;
+    --gray: #94a3b8;
+    --gradient-primary: linear-gradient(135deg, #6c8cff 0%, #9d6cff 50%, #ff8a6c 100%);
+    --gradient-success: linear-gradient(135deg, #34d399 0%, #22d3ee 100%);
+    --shadow-1: 0 4px 14px -2px rgba(0, 0, 0, 0.4);
+    --shadow-2: 0 20px 60px -20px rgba(108, 140, 255, 0.25);
+    --shadow-3: 0 30px 90px -30px rgba(157, 108, 255, 0.35);
+    --shadow-glow: 0 0 40px rgba(108, 140, 255, 0.4);
+    --radius: 16px;
+    --radius-sm: 10px;
+    --radius-lg: 22px;
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-0);
+    color: var(--text-0);
+    overflow-x: hidden;
+    line-height: 1.6;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 20% 0%, rgba(108, 140, 255, 0.12), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(157, 108, 255, 0.10), transparent),
+      radial-gradient(ellipse 50% 30% at 50% 50%, rgba(255, 138, 108, 0.05), transparent);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ---------- HEADER ---------- */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    background: rgba(10, 14, 26, 0.78);
+    border-bottom: 1px solid var(--line);
+  }
+  .header-inner {
+    max-width: 1500px; margin: 0 auto;
+    padding: 18px 28px;
+    display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .logo {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: var(--gradient-primary);
+    display: grid; place-items: center; color: white; font-weight: 800; font-size: 22px;
+    box-shadow: 0 8px 20px -6px rgba(108, 140, 255, 0.6);
+    position: relative; overflow: hidden;
+  }
+  .logo::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%);
+    transform: translateX(-100%);
+    animation: logoShine 4s ease-in-out infinite;
+  }
+  @keyframes logoShine { 0%, 80% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+  .brand h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+  .brand p { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; background: var(--bg-1); border: 1px solid var(--line); padding: 4px; border-radius: 12px; }
+  .tab {
+    padding: 9px 16px; border-radius: 8px; cursor: pointer; user-select: none;
+    font-size: 13px; font-weight: 500; color: var(--text-2); transition: all 0.18s var(--ease);
+    border: none; background: transparent;
+  }
+  .tab:hover { color: var(--text-0); background: var(--bg-2); }
+  .tab.active {
+    color: var(--text-0);
+    background: linear-gradient(135deg, rgba(108, 140, 255, 0.25), rgba(157, 108, 255, 0.18));
+    box-shadow: inset 0 0 0 1px rgba(108, 140, 255, 0.35);
+  }
+
+  /* ---------- LAYOUT ---------- */
+  main { max-width: 1500px; margin: 0 auto; padding: 28px 28px 80px; }
+  .panel { display: none; animation: fadeUp 0.35s var(--ease); }
+  .panel.active { display: block; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .grid-2 { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  @media (max-width: 1100px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: linear-gradient(180deg, var(--bg-1), var(--bg-2));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 22px;
+    box-shadow: var(--shadow-1);
+  }
+  .card h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.01em; }
+  .card .subtitle { color: var(--text-2); font-size: 13px; margin-bottom: 18px; }
+
+  /* ---------- HERO (Problem) ---------- */
+  .hero {
+    position: relative; overflow: hidden;
+    background: linear-gradient(135deg, rgba(108, 140, 255, 0.10), rgba(157, 108, 255, 0.06));
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 36px;
+    margin-bottom: 22px;
+  }
+  .hero::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 90% 20%, rgba(108, 140, 255, 0.18), transparent 40%),
+      radial-gradient(circle at 10% 80%, rgba(157, 108, 255, 0.14), transparent 40%);
+    pointer-events: none;
+  }
+  .hero h1 {
+    font-size: 32px; font-weight: 800; letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #fff, #a8b5ff);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    margin-bottom: 8px;
+  }
+  .hero .lead { font-size: 15px; color: var(--text-1); max-width: 720px; position: relative; }
+
+  /* ---------- TABLE ---------- */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-weight: 600; color: var(--text-2); padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { padding: 11px 12px; border-bottom: 1px solid rgba(40, 49, 80, 0.4); }
+  tr:last-child td { border-bottom: none; }
+  tr.row-current { background: rgba(251, 191, 36, 0.08); }
+  tr.row-visited { background: rgba(52, 211, 153, 0.05); }
+  tr.row-source td:first-child::before { content: '● '; color: var(--blue); }
+  tr.row-destination td:first-child::before { content: '◆ '; color: var(--red); }
+
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .pill.visited { background: rgba(52, 211, 153, 0.15); color: var(--green); }
+  .pill.current { background: rgba(251, 191, 36, 0.15); color: var(--yellow); }
+  .pill.unvisited { background: rgba(148, 163, 184, 0.15); color: var(--gray); }
+  .pill.source { background: rgba(96, 165, 250, 0.15); color: var(--blue); }
+  .pill.destination { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+
+  /* ---------- CONTROLS ---------- */
+  .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+  .control { display: flex; flex-direction: column; gap: 6px; }
+  .control label { font-size: 11px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.05em; }
+  select, input[type=range], input[type=text] {
+    background: var(--bg-1); border: 1px solid var(--line); color: var(--text-0);
+    padding: 9px 12px; border-radius: 10px; font-family: inherit; font-size: 13px; outline: none;
+    transition: border 0.15s var(--ease);
+  }
+  select { appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b94b3' stroke-width='2'><polyline points='6 9 12 15 18 9'/></svg>"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+  select:focus, input:focus { border-color: var(--accent); }
+  input[type=range] { padding: 0; width: 160px; height: 36px; accent-color: var(--accent); }
+  .range-row { display: flex; align-items: center; gap: 10px; }
+  .range-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); min-width: 70px; }
+
+  button.btn {
+    background: var(--bg-1); border: 1px solid var(--line); color: var(--text-0);
+    padding: 10px 18px; border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s var(--ease); display: inline-flex; align-items: center; gap: 7px;
+  }
+  button.btn:hover:not(:disabled) { background: var(--bg-2); border-color: var(--accent); transform: translateY(-1px); }
+  button.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.btn.primary {
+    background: var(--gradient-primary);
+    border: none; color: white; box-shadow: 0 8px 20px -6px rgba(108, 140, 255, 0.6);
+  }
+  button.btn.primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 12px 28px -6px rgba(108, 140, 255, 0.7); }
+  button.btn.danger { color: var(--red); }
+  button.btn.danger:hover:not(:disabled) { background: rgba(248, 113, 113, 0.1); border-color: var(--red); }
+  button.btn svg { width: 12px; height: 12px; }
+
+  /* ---------- VISUALIZER ---------- */
+  .viz-stage {
+    background:
+      radial-gradient(ellipse at center, rgba(108, 140, 255, 0.05), transparent 60%),
+      linear-gradient(180deg, var(--bg-1), var(--bg-0));
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--line);
+    padding: 0;
+    overflow: hidden;
+    position: relative;
+    aspect-ratio: 5 / 3;
+    min-height: 360px;
+    box-shadow: var(--shadow-1);
+  }
+  .svg-graph { width: 100%; height: 100%; display: block; }
+  .node-circle { transition: all 0.4s var(--ease); cursor: pointer; }
+  .node-circle:hover { filter: brightness(1.2); }
+  .node-label { fill: var(--text-0); font-size: 12px; font-weight: 600; pointer-events: none; text-anchor: middle; }
+  .node-sublabel { fill: var(--text-2); font-size: 10px; pointer-events: none; text-anchor: middle; font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+  .node-tag { font-size: 9px; font-family: 'JetBrains Mono', monospace; font-weight: 700; text-anchor: middle; pointer-events: none; letter-spacing: 0.08em; }
+  .edge-line { transition: all 0.4s var(--ease); }
+  .edge-label {
+    fill: var(--text-1); font-size: 11px; font-weight: 600; pointer-events: none; text-anchor: middle;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .edge-label-bg { fill: var(--bg-0); stroke: var(--line); stroke-width: 1; }
+
+  /* Node states */
+  .node-unvisited { fill: #2a3247; stroke: #4a5577; stroke-width: 2; }
+  .node-source { fill: #1e3a8a; stroke: var(--blue); stroke-width: 3; }
+  .node-destination { fill: #7f1d1d; stroke: var(--red); stroke-width: 3; }
+  .node-current { fill: #422006; stroke: var(--yellow); stroke-width: 3; }
+  .node-visited { fill: #064e3b; stroke: var(--green); stroke-width: 2.5; }
+  .node-visited-source { fill: #1e3a8a; stroke: var(--blue); stroke-width: 3; }
+  .node-visited-destination { fill: #064e3b; stroke: var(--red); stroke-width: 3; }
+  .pulse { animation: pulse 1.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+
+  /* Edge states */
+  .edge-inactive { stroke: #2a3247; stroke-width: 2; }
+  .edge-active { stroke: var(--accent-3); stroke-width: 3.5; }
+  .edge-path { stroke: var(--green); stroke-width: 5; filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.55)); }
+  .edge-exploring { stroke-dasharray: 6 4; animation: dash 0.8s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -10; } }
+
+  /* Path tracer */
+  .tracer { fill: var(--yellow); filter: drop-shadow(0 0 8px var(--yellow)); }
+  .tracer-trail { fill: none; stroke: var(--yellow); stroke-width: 3; stroke-linecap: round; opacity: 0.7; }
+
+  /* Info panels */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .info-cell {
+    background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .info-cell .k { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); font-weight: 600; margin-bottom: 4px; }
+  .info-cell .v { font-size: 14px; color: var(--text-0); font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+  .info-cell .v.big { font-size: 18px; }
+
+  .step-text {
+    background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 16px; font-size: 13px; color: var(--text-1);
+    min-height: 70px; line-height: 1.6;
+  }
+  .step-text .hl { color: var(--accent); font-weight: 600; }
+  .step-text .hl-green { color: var(--green); font-weight: 600; }
+  .step-text .hl-yellow { color: var(--yellow); font-weight: 600; }
+  .step-text .hl-red { color: var(--red); font-weight: 600; }
+
+  .nlist { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .nlist .item {
+    background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px;
+    padding: 4px 10px; font-size: 12px; font-family: 'JetBrains Mono', monospace;
+  }
+  .nlist .item.upd { border-color: var(--accent-3); color: var(--accent-3); }
+  .nlist .item.mute { color: var(--text-3); }
+
+  /* Result panel */
+  .result-card {
+    background: linear-gradient(135deg, rgba(52, 211, 153, 0.10), rgba(108, 140, 255, 0.08));
+    border: 1px solid rgba(52, 211, 153, 0.4);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-top: 16px;
+    display: none;
+    box-shadow: var(--shadow-2);
+  }
+  .result-card.show { display: block; animation: fadeUp 0.4s var(--ease); }
+  .result-card .route { font-size: 22px; font-weight: 700; margin: 8px 0; }
+  .result-card .route .arrow { color: var(--accent); margin: 0 6px; }
+  .result-card .distance { font-size: 38px; font-weight: 800; color: var(--green); font-family: 'JetBrains Mono', monospace; }
+  .result-card .distance small { font-size: 16px; color: var(--text-2); font-weight: 500; }
+
+  /* ---------- STATISTICS ---------- */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  @media (max-width: 700px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat {
+    background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px;
+    padding: 11px 13px;
+  }
+  .stat .k { font-size: 9px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-2); font-weight: 700; margin-bottom: 3px; }
+  .stat .v { font-size: 18px; font-weight: 700; color: var(--text-0); font-family: 'JetBrains Mono', monospace; line-height: 1.1; }
+  .stat .delta { font-size: 10px; margin-top: 3px; font-weight: 500; color: var(--text-3); }
+
+  /* Legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; font-size: 12px; }
+  .legend .item { display: flex; align-items: center; gap: 6px; color: var(--text-1); }
+  .legend .dot { width: 12px; height: 12px; border-radius: 50%; }
+
+  /* ---------- MAP/GRAPH IMAGE (Problem Tab) ---------- */
+  .map-svg-wrap { background: var(--bg-1); border-radius: 12px; padding: 20px; border: 1px solid var(--line); }
+  .map-svg { width: 100%; height: auto; display: block; }
+  .card.full, .full { grid-column: 1 / -1; }
+
+  /* ---------- TUTORIAL/THEORY CONTENT ---------- */
+  .prose h3 { font-size: 16px; font-weight: 700; margin: 20px 0 8px; color: var(--text-0); }
+  .prose h4 { font-size: 14px; font-weight: 600; margin: 14px 0 6px; color: var(--accent); }
+  .prose p { color: var(--text-1); margin-bottom: 10px; font-size: 14px; }
+  .prose ul, .prose ol { color: var(--text-1); margin: 0 0 10px 22px; font-size: 14px; }
+  .prose li { margin-bottom: 6px; }
+  .prose code, .prose pre { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+  .prose code { background: var(--bg-1); padding: 2px 6px; border-radius: 4px; color: var(--accent); }
+  .prose pre {
+    background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px; overflow-x: auto; line-height: 1.6; color: var(--text-0);
+  }
+  .prose pre .k { color: var(--accent-2); }
+  .prose pre .s { color: var(--green); }
+  .prose pre .c { color: var(--text-3); font-style: italic; }
+  .prose pre .n { color: var(--accent-3); }
+  .prose strong { color: var(--text-0); }
+
+  .callout {
+    background: linear-gradient(135deg, rgba(108, 140, 255, 0.08), rgba(157, 108, 255, 0.05));
+    border-left: 3px solid var(--accent);
+    padding: 12px 16px; border-radius: 0 10px 10px 0; margin: 12px 0;
+    font-size: 13px; color: var(--text-1);
+  }
+  .callout.warn { background: rgba(248, 113, 113, 0.08); border-color: var(--red); }
+  .callout.tip { background: rgba(52, 211, 153, 0.08); border-color: var(--green); }
+
+  .concept-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 14px 0; }
+  @media (max-width: 700px) { .concept-grid { grid-template-columns: 1fr; } }
+  .concept {
+    background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; padding: 14px;
+  }
+  .concept .label { font-size: 11px; color: var(--accent); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .concept .def { font-size: 13px; color: var(--text-1); }
+
+  .walkthrough {
+    background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin: 10px 0;
+  }
+  .walkthrough .head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .walkthrough .num { background: var(--accent); color: white; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+  .walkthrough .title { font-weight: 600; color: var(--text-0); font-size: 14px; }
+  .walkthrough .body { font-size: 13px; color: var(--text-1); }
+
+  /* Footer */
+  footer { text-align: center; padding: 30px 20px; color: var(--text-3); font-size: 12px; border-top: 1px solid var(--line); margin-top: 40px; }
+
+  /* small helpers */
+  .flex { display: flex; }
+  .gap-8 { gap: 8px; }
+  .gap-12 { gap: 12px; }
+  .gap-16 { gap: 16px; }
+  .mt-12 { margin-top: 12px; }
+  .mt-16 { margin-top: 16px; }
+  .mt-20 { margin-top: 20px; }
+  .mb-8 { margin-bottom: 8px; }
+  .mb-12 { margin-bottom: 12px; }
+  .text-mute { color: var(--text-2); }
+  .text-mono { font-family: 'JetBrains Mono', monospace; }
+  .text-center { text-align: center; }
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 600; background: var(--bg-2); border: 1px solid var(--line); color: var(--text-1); }
+
+  /* Hide scrollbar nicely on horizontal lists */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg-1); }
+  ::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+  /* keyboard hint chips */
+  .kbd {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    background: var(--bg-1);
+    border: 1px solid var(--line);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--text-1);
+  }
+
+  @media (max-width: 768px) {
+    .header-inner { padding: 14px 16px; }
+    .brand h1 { font-size: 15px; }
+    .brand p { display: none; }
+    .tabs { width: 100%; overflow-x: auto; }
+    main { padding: 18px 16px 60px; }
+    .hero { padding: 24px 20px; }
+    .hero h1 { font-size: 24px; }
+    .card { padding: 16px; }
+    .viz-stage { aspect-ratio: 4 / 3; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ================== HEADER ================== -->
+<header>
+  <div class="header-inner">
+    <div class="brand">
+      <div class="logo">D</div>
+      <div>
+        <h1>Dijkstra's Algorithm Simulator</h1>
+        <p>Bahrain Road Network · Interactive Visualization</p>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="problem">Problem</button>
+      <button class="tab" data-tab="visualizer">Visualizer</button>
+      <button class="tab" data-tab="tutorial">Tutorial</button>
+      <button class="tab" data-tab="theory">Theory</button>
+      <button class="tab" data-tab="about">About</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- ================== PROBLEM PANEL ================== -->
+<section class="panel active" id="panel-problem">
+  <div class="hero">
+    <h1>Find the shortest route from Manama to Durrat Al Bahrain</h1>
+    <p class="lead">
+      Given a weighted graph of the Bahrain road network with 8 cities and 10 direct roads,
+      we want to find the shortest path between <strong>Manama</strong> (source) and
+      <strong>Durrat Al Bahrain</strong> (destination) using Dijkstra's algorithm.
+    </p>
+    <div class="info-grid" style="margin-top: 22px;">
+      <div class="info-cell"><div class="k">Source</div><div class="v big">Manama</div></div>
+      <div class="info-cell"><div class="k">Destination</div><div class="v big">Durrat Al Bahrain</div></div>
+      <div class="info-cell"><div class="k">Cities (vertices)</div><div class="v">8</div></div>
+      <div class="info-cell"><div class="k">Direct roads (edges)</div><div class="v">10</div></div>
+      <div class="info-cell"><div class="k">Expected distance</div><div class="v big" style="color: var(--green);">24 km</div></div>
+      <div class="info-cell"><div class="k">Expected path</div><div class="v" style="font-size: 13px;">Manama → Sitra → Durrat</div></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h2>Road Network Edges</h2>
+      <p class="subtitle">All direct roads with distances in kilometers</p>
+      <table>
+        <thead>
+          <tr><th>From</th><th>To</th><th>Distance (km)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Manama</td><td>Muharraq</td><td class="text-mono">6</td></tr>
+          <tr><td>Manama</td><td>Isa Town</td><td class="text-mono">10</td></tr>
+          <tr><td>Manama</td><td>Sitra</td><td class="text-mono">12</td></tr>
+          <tr><td>Manama</td><td>Budaiya</td><td class="text-mono">14</td></tr>
+          <tr><td>Isa Town</td><td>Rifa</td><td class="text-mono">6</td></tr>
+          <tr><td>Isa Town</td><td>Hamad Town</td><td class="text-mono">8</td></tr>
+          <tr><td>Isa Town</td><td>Sitra</td><td class="text-mono">9</td></tr>
+          <tr><td>Budaiya</td><td>Hamad Town</td><td class="text-mono">10</td></tr>
+          <tr><td>Sitra</td><td>Durrat Al Bahrain</td><td class="text-mono">12</td></tr>
+          <tr><td>Rifa</td><td>Durrat Al Bahrain</td><td class="text-mono">18</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card full">
+      <h2>Network Map</h2>
+      <p class="subtitle">Geographic positions of cities (illustration)</p>
+      <div class="map-svg-wrap">
+        <svg class="map-svg" viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="mapbg" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0%" stop-color="#0a1830" />
+              <stop offset="100%" stop-color="#0e1a35" />
+            </linearGradient>
+          </defs>
+          <rect width="800" height="480" fill="url(#mapbg)" />
+          <!-- Decorative grid -->
+          <g stroke="#1e2740" stroke-width="0.5" opacity="0.6">
+            <path d="M0 100 H800 M0 200 H800 M0 300 H800 M0 400 H800" />
+            <path d="M100 0 V480 M200 0 V480 M300 0 V480 M400 0 V480 M500 0 V480 M600 0 V480 M700 0 V480" />
+          </g>
+          <text x="50" y="60" fill="#3a4a7a" font-size="10" font-family="JetBrains Mono" opacity="0.6">ARABIAN GULF</text>
+          <!-- Edges -->
+          <g stroke="#3a4a7a" stroke-width="1.8" fill="none" opacity="0.7">
+            <line x1="280" y1="220" x2="185" y2="110" />
+            <line x1="280" y1="220" x2="370" y2="300" />
+            <line x1="280" y1="220" x2="430" y2="200" />
+            <line x1="280" y1="220" x2="130" y2="240" />
+            <line x1="370" y1="300" x2="520" y2="320" />
+            <line x1="370" y1="300" x2="300" y2="390" />
+            <line x1="370" y1="300" x2="430" y2="200" />
+            <line x1="130" y1="240" x2="300" y2="390" />
+            <line x1="430" y1="200" x2="660" y2="260" />
+            <line x1="520" y1="320" x2="660" y2="260" />
+          </g>
+          <!-- Edge labels -->
+          <g font-family="JetBrains Mono" font-size="11" fill="#a8b5ff" text-anchor="middle">
+            <rect x="221" y="155" width="22" height="16" rx="3" fill="#0a1830" />
+            <text x="232" y="167">6</text>
+            <rect x="314" y="250" width="22" height="16" rx="3" fill="#0a1830" />
+            <text x="325" y="262">10</text>
+            <rect x="344" y="200" width="22" height="16" rx="3" fill="#0a1830" />
+            <text x="355" y="212">12</text>
+            <rect x="194" y="220" width="22" height="16" rx="3" fill="#0a1830" />
+            <text x="205" y="232">14</text>
+            <rect x="434" y="300" width="22" height="16" rx="3" fill="#0a1830" />
+            <text x="445" y="312">6</text>
+            <rect x="324" y="335" width="22" height="16" rx="3" fill="#0a1830" />
+            <text x="335" y="347">8</text>
+            <rect x="389" y="240" width="22" height="16" rx="3" fill="#0a1830" />
+            <text x="400" y="252">9</text>
+            <rect x="204" y="305" width="22" height="16" rx="3" fill="#0a1830" />
+            <text x="215" y="317">10</text>
+            <rect x="534" y="220" width="22" height="16" rx="3" fill="#0a1830" />
+            <text x="545" y="232">12</text>
+            <rect x="579" y="280" width="22" height="16" rx="3" fill="#0a1830" />
+            <text x="590" y="292">18</text>
+          </g>
+          <!-- Nodes -->
+          <g>
+            <circle cx="185" cy="110" r="22" fill="#1e2740" stroke="#94a3b8" stroke-width="2" />
+            <text x="185" y="114" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">Muharraq</text>
+            <circle cx="280" cy="220" r="28" fill="#1e3a8a" stroke="#60a5fa" stroke-width="3" />
+            <text x="280" y="224" fill="#fff" font-size="12" font-weight="700" text-anchor="middle">Manama</text>
+            <text x="280" y="260" fill="#60a5fa" font-size="9" text-anchor="middle" font-family="JetBrains Mono">SOURCE</text>
+            <circle cx="130" cy="240" r="20" fill="#1e2740" stroke="#94a3b8" stroke-width="2" />
+            <text x="130" y="244" fill="#fff" font-size="10" font-weight="600" text-anchor="middle">Budaiya</text>
+            <circle cx="370" cy="300" r="22" fill="#1e2740" stroke="#94a3b8" stroke-width="2" />
+            <text x="370" y="304" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">Isa Town</text>
+            <circle cx="300" cy="390" r="20" fill="#1e2740" stroke="#94a3b8" stroke-width="2" />
+            <text x="300" y="394" fill="#fff" font-size="10" font-weight="600" text-anchor="middle">Hamad Town</text>
+            <circle cx="520" cy="320" r="20" fill="#1e2740" stroke="#94a3b8" stroke-width="2" />
+            <text x="520" y="324" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">Rifa</text>
+            <circle cx="430" cy="200" r="22" fill="#1e2740" stroke="#94a3b8" stroke-width="2" />
+            <text x="430" y="204" fill="#fff" font-size="11" font-weight="600" text-anchor="middle">Sitra</text>
+            <circle cx="660" cy="260" r="28" fill="#7f1d1d" stroke="#f87171" stroke-width="3" />
+            <text x="660" y="258" fill="#fff" font-size="10" font-weight="700" text-anchor="middle">Durrat</text>
+            <text x="660" y="272" fill="#fff" font-size="10" font-weight="700" text-anchor="middle">Al Bahrain</text>
+            <text x="660" y="302" fill="#f87171" font-size="9" text-anchor="middle" font-family="JetBrains Mono">DESTINATION</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-20">
+    <h2>What you will learn</h2>
+    <p class="subtitle">By exploring this interactive simulator you will understand how Dijkstra's algorithm works</p>
+    <div class="concept-grid">
+      <div class="concept">
+        <div class="label">① Greedy Strategy</div>
+        <div class="def">How the algorithm always expands the closest unvisited node first — and why this is provably correct for non-negative weights.</div>
+      </div>
+      <div class="concept">
+        <div class="label">② Relaxation</div>
+        <div class="def">How tentative distances to neighbors are updated when a shorter path is discovered through the current node.</div>
+      </div>
+      <div class="concept">
+        <div class="label">③ Priority Queue</div>
+        <div class="def">Why we need a data structure that always extracts the minimum-distance node efficiently.</div>
+      </div>
+      <div class="concept">
+        <div class="label">④ Path Reconstruction</div>
+        <div class="def">How to backtrack from destination to source using the <code>previous</code> array to build the final path.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+  <!-- ================== VISUALIZER PANEL ================== -->
+<section class="panel" id="panel-visualizer">
+  <div class="card">
+    <h2>Algorithm Controls</h2>
+    <p class="subtitle">Configure the simulation, then press Start</p>
+
+    <div class="controls">
+      <div class="control">
+        <label for="sourceSelect">Source city</label>
+        <select id="sourceSelect">
+          <option value="Manama" selected>Manama</option>
+          <option value="Muharraq">Muharraq</option>
+          <option value="Isa Town">Isa Town</option>
+          <option value="Sitra">Sitra</option>
+          <option value="Budaiya">Budaiya</option>
+          <option value="Rifa">Rifa</option>
+          <option value="Hamad Town">Hamad Town</option>
+          <option value="Durrat Al Bahrain">Durrat Al Bahrain</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="destSelect">Destination city</label>
+        <select id="destSelect">
+          <option value="Durrat Al Bahrain" selected>Durrat Al Bahrain</option>
+          <option value="Manama">Manama</option>
+          <option value="Muharraq">Muharraq</option>
+          <option value="Isa Town">Isa Town</option>
+          <option value="Sitra">Sitra</option>
+          <option value="Budaiya">Budaiya</option>
+          <option value="Rifa">Rifa</option>
+          <option value="Hamad Town">Hamad Town</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="speedRange">Animation speed</label>
+        <div class="range-row">
+          <input type="range" id="speedRange" min="1" max="5" step="1" value="3" />
+          <span class="range-val" id="speedLabel">Normal</span>
+        </div>
+      </div>
+      <div class="control" style="flex: 1; min-width: 240px;">
+        <label>&nbsp;</label>
+        <div class="flex gap-8" style="flex-wrap: wrap;">
+          <button class="btn primary" id="btnStart">
+            <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span id="btnStartLabel">Start</span>
+          </button>
+          <button class="btn" id="btnPause" disabled>
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            <span id="btnPauseLabel">Pause</span>
+          </button>
+          <button class="btn" id="btnStep" disabled>
+            <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"/></svg>
+            Step
+          </button>
+          <button class="btn danger" id="btnReset">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+            Reset
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex gap-12 mt-12" style="flex-wrap: wrap; font-size: 11px; color: var(--text-2);">
+      <span><span class="kbd">Space</span> Play/Pause</span>
+      <span><span class="kbd">→</span> Step</span>
+      <span><span class="kbd">R</span> Reset</span>
+    </div>
+
+    <div class="legend">
+      <div class="item"><span class="dot" style="background:#1e3a8a; border: 2px solid #60a5fa;"></span>Source</div>
+      <div class="item"><span class="dot" style="background:#7f1d1d; border: 2px solid #f87171;"></span>Destination</div>
+      <div class="item"><span class="dot" style="background:#2a3247; border: 2px solid #4a5577;"></span>Unvisited</div>
+      <div class="item"><span class="dot" style="background:#422006; border: 2px solid #fbbf24;"></span>Current</div>
+      <div class="item"><span class="dot" style="background:#064e3b; border: 2px solid #34d399;"></span>Visited</div>
+      <div class="item"><span style="display:inline-block; width: 22px; height: 2px; background: var(--accent-3);"></span>Active edge</div>
+      <div class="item"><span style="display:inline-block; width: 22px; height: 4px; background: var(--green); border-radius: 2px; box-shadow: 0 0 6px rgba(52, 211, 153, 0.6);"></span>Optimal path</div>
+    </div>
+  </div>
+
+  <div class="grid-2 mt-20">
+    <div class="viz-stage full">
+      <svg class="svg-graph" viewBox="0 0 800 480" id="graphSvg" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <filter id="nodeShadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.5" />
+          </filter>
+          <filter id="glowGreen" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feFlood flood-color="#34d399" flood-opacity="0.5" />
+            <feComposite in2="blur" operator="in" />
+            <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+        <g id="edgeLayer"></g>
+        <g id="tracerLayer"></g>
+        <g id="nodeLayer"></g>
+      </svg>
+    </div>
+
+    <div>
+      <div class="card">
+        <h2>Step Display</h2>
+        <p class="subtitle">Live status of the algorithm</p>
+        <div class="info-grid">
+          <div class="info-cell"><div class="k">Step</div><div class="v" id="stepNum">0 / 0</div></div>
+          <div class="info-cell"><div class="k">Current node</div><div class="v" id="currentNode">—</div></div>
+          <div class="info-cell"><div class="k">Distance from start</div><div class="v" id="currentDist">—</div></div>
+          <div class="info-cell"><div class="k">Visited count</div><div class="v" id="visitedCount">0 / 8</div></div>
+        </div>
+
+        <div class="step-text mt-12" id="explanation">
+          Press <strong>Start</strong> to run the algorithm, or <strong>Step</strong> to advance one iteration at a time.
+        </div>
+
+        <div class="mt-12">
+          <div class="k" style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); font-weight: 600; margin-bottom: 6px;">Unvisited neighbors</div>
+          <div class="nlist" id="neighborList">
+            <span class="item mute">—</span>
+          </div>
+        </div>
+
+        <div class="mt-12">
+          <div class="k" style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-2); font-weight: 600; margin-bottom: 6px;">Priority queue (next candidates)</div>
+          <div class="nlist" id="queueList">
+            <span class="item mute">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2 mt-16">
+    <div class="card">
+      <h2>Distance Tracking</h2>
+      <p class="subtitle">Tentative shortest distances — updated live</p>
+      <table id="distTable">
+        <thead>
+          <tr><th>City</th><th>Distance</th><th>From</th><th>Status</th></tr>
+        </thead>
+        <tbody id="distTableBody"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2>Statistics</h2>
+      <p class="subtitle">Algorithm performance metrics</p>
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="k">Nodes visited</div>
+          <div class="v" id="statVisited">0</div>
+          <div class="delta" id="statVisitedPct">of 8</div>
+        </div>
+        <div class="stat">
+          <div class="k">Edges relaxed</div>
+          <div class="v" id="statRelaxed">0</div>
+          <div class="delta">edge relaxations</div>
+        </div>
+        <div class="stat">
+          <div class="k">Queue pops</div>
+          <div class="v" id="statPops">0</div>
+          <div class="delta">extract-min ops</div>
+        </div>
+        <div class="stat">
+          <div class="k">Path length</div>
+          <div class="v" id="statPathLen">—</div>
+          <div class="delta" id="statPathCost">km</div>
+        </div>
+      </div>
+      <div class="stat-grid mt-12">
+        <div class="stat">
+          <div class="k">Time complexity</div>
+          <div class="v" id="statComplexity" style="font-size: 13px;">O((V+E) log V)</div>
+          <div class="delta" id="statComplexityNote">with binary heap</div>
+        </div>
+        <div class="stat">
+          <div class="k">Status</div>
+          <div class="v" id="statStatus" style="font-size: 13px; color: var(--yellow);">Ready</div>
+          <div class="delta" id="statStatusNote">Press Start</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="result-card" id="resultCard">
+    <div class="flex" style="align-items: center; gap: 14px; flex-wrap: wrap;">
+      <div style="font-size: 36px;">✅</div>
+      <div>
+        <div style="font-size: 13px; color: var(--text-1); font-weight: 500;">Solution found!</div>
+        <div class="route" id="resultRoute">—</div>
+        <div class="distance" id="resultDistance">— <small>km</small></div>
+      </div>
+    </div>
+    <div class="grid-3 mt-16">
+      <div class="info-cell"><div class="k">Path breakdown</div><div class="v" id="resultBreakdown" style="font-size: 12px; line-height: 1.7;">—</div></div>
+      <div class="info-cell"><div class="k">Visitation order</div><div class="v" id="resultOrder" style="font-size: 12px; line-height: 1.7;">—</div></div>
+      <div class="info-cell"><div class="k">Algorithm metrics</div><div class="v" id="resultMetrics" style="font-size: 12px; line-height: 1.7;">—</div></div>
+    </div>
+  </div>
+</section>
+
+  <!-- ================== TUTORIAL PANEL ================== -->
+<section class="panel" id="panel-tutorial">
+  <div class="card prose">
+    <h2>What is Dijkstra's Algorithm?</h2>
+    <p>
+      <strong>Dijkstra's algorithm</strong>, conceived by Dutch computer scientist Edsger W. Dijkstra in 1956,
+      finds the shortest path from a source vertex to every other vertex in a graph with
+      <strong>non-negative edge weights</strong>. It is one of the most fundamental algorithms in graph theory and
+      forms the backbone of routing protocols, navigation systems, and network optimization.
+    </p>
+    <p>For our Bahrain network, the <em>weight</em> is the road distance in kilometers. Once the algorithm finishes,
+    we can read the shortest distance from Manama to <em>any</em> other city, including Durrat Al Bahrain.</p>
+
+    <h3>Step-by-Step Walkthrough</h3>
+    <div class="walkthrough">
+      <div class="head"><div class="num">1</div><div class="title">Initialization</div></div>
+      <div class="body">
+        Set the distance to the source vertex <code>s</code> to 0 and the distance to every other vertex to
+        <code>∞</code> (infinity). Mark all vertices as unvisited. Create a priority queue seeded with the source.
+      </div>
+    </div>
+    <div class="walkthrough">
+      <div class="head"><div class="num">2</div><div class="title">Selection</div></div>
+      <div class="body">
+        Repeatedly extract the <strong>unvisited vertex with the smallest known distance</strong> from the priority queue.
+        This is the current vertex <code>u</code>. On the first iteration it is always the source.
+      </div>
+    </div>
+    <div class="walkthrough">
+      <div class="head"><div class="num">3</div><div class="title">Relaxation</div></div>
+      <div class="body">
+        For every unvisited neighbor <code>v</code> of <code>u</code>, compute a candidate distance
+        <code>alt = dist[u] + w(u, v)</code>. If <code>alt &lt; dist[v]</code>, update
+        <code>dist[v] = alt</code> and record <code>prev[v] = u</code>. Push the new distance into the priority queue.
+      </div>
+    </div>
+    <div class="walkthrough">
+      <div class="head"><div class="num">4</div><div class="title">Marking</div></div>
+      <div class="body">
+        Mark vertex <code>u</code> as <strong>visited</strong>. Once visited, its distance is final — it can never be
+        improved. (This invariant is what makes Dijkstra's algorithm correct.)
+      </div>
+    </div>
+    <div class="walkthrough">
+      <div class="head"><div class="num">5</div><div class="title">Repetition</div></div>
+      <div class="body">
+        Loop back to step 2. Stop when the destination is visited (or when the priority queue is empty — in which case
+        the destination is unreachable).
+      </div>
+    </div>
+
+    <h3>Interactive Walkthrough — Bahrain Example</h3>
+    <p>Let's trace through the first few iterations manually so you know what to look for in the visualizer:</p>
+    <ol>
+      <li><strong>Init</strong> — <code>dist[Manama] = 0</code>, all other distances = ∞.</li>
+      <li><strong>Visit Manama</strong> (dist 0). Relax its neighbors:
+        <ul>
+          <li>Muharraq: 0 + 6 = <strong>6</strong></li>
+          <li>Isa Town: 0 + 10 = <strong>10</strong></li>
+          <li>Sitra: 0 + 12 = <strong>12</strong></li>
+          <li>Budaiya: 0 + 14 = <strong>14</strong></li>
+        </ul>
+      </li>
+      <li><strong>Pick smallest unvisited</strong> → <strong>Muharraq (6)</strong>. But Muharraq has no unvisited neighbors that connect to anything new, so it's marked visited with distance 6. (Dead end relative to our destination.)</li>
+      <li><strong>Pick next smallest</strong> → <strong>Isa Town (10)</strong>. Relax its neighbors:
+        <ul>
+          <li>Rifa: 10 + 6 = 16</li>
+          <li>Hamad Town: 10 + 8 = 18</li>
+          <li>Sitra: 10 + 9 = <strong>19</strong> — but Sitra is already 12, so <strong>no update</strong>! Direct Manama→Sitra wins.</li>
+        </ul>
+      </li>
+      <li><strong>Pick next</strong> → <strong>Sitra (12)</strong>. Relax: Durrat = 12 + 12 = <strong>24</strong> ✅</li>
+      <li><strong>Pick next</strong> → Budaiya (14), then Hamad Town (18), then Rifa (16, also leads to Durrat at 34 — worse), etc.</li>
+    </ol>
+    <p>The algorithm terminates with <code>dist[Durrat] = 24</code> and the path reconstructed via
+      <code>prev[Durrat] = Sitra</code>, <code>prev[Sitra] = Manama</code> → <strong>Manama → Sitra → Durrat Al Bahrain</strong>.</p>
+
+    <div class="callout">
+      <strong>Why is Manama → Sitra → Durrat (24) better than Manama → Isa Town → Rifa → Durrat (10+6+18 = 34)?</strong>
+      Because at every step Dijkstra expands the cheapest frontier, the direct Manama→Sitra edge stays as
+      <code>dist[Sitra] = 12</code>. By the time we consider Rifa, even its 6 km to Isa Town cannot
+      beat the already-known 12.
+    </div>
+
+    <h3>Key Concepts</h3>
+    <div class="concept-grid">
+      <div class="concept">
+        <div class="label">Weighted Graph</div>
+        <div class="def">A graph where each edge carries a numerical cost — here, road distance in kilometers.</div>
+      </div>
+      <div class="concept">
+        <div class="label">Priority Queue</div>
+        <div class="def">A data structure (binary heap, Fibonacci heap, …) that always returns the smallest element in <code>O(log n)</code> — crucial for efficiency.</div>
+      </div>
+      <div class="concept">
+        <div class="label">Greedy Approach</div>
+        <div class="def">Once a node is marked visited, its shortest distance is final. This greedy choice is provably correct when all weights are non-negative.</div>
+      </div>
+      <div class="concept">
+        <div class="label">Relaxation</div>
+        <div class="def">Updating a neighbor's tentative distance when we find a shorter route through the current node. The heart of the algorithm.</div>
+      </div>
+    </div>
+
+    <h3>Common Mistakes</h3>
+    <div class="callout warn">
+      <strong>❌ Re-visiting a visited node.</strong> A visited node's distance is already final. Re-processing it wastes time and can introduce subtle bugs if you mutate <code>dist</code> after the fact.
+    </div>
+    <div class="callout warn">
+      <strong>❌ Forgetting to relax all unvisited neighbors.</strong> Skipping one means the shortest path to that neighbor is never found.
+    </div>
+    <div class="callout warn">
+      <strong>❌ Forgetting to update <code>prev</code>.</strong> Without it, you can compute the distance but cannot reconstruct the path.
+    </div>
+    <div class="callout tip">
+      <strong>✅ Use a priority queue.</strong> A linear scan of all unvisited nodes makes the algorithm <code>O(V²)</code>. A binary heap brings it down to <code>O((V+E) log V)</code>.
+    </div>
+  </div>
+</section>
+
+  <!-- ================== THEORY PANEL ================== -->
+<section class="panel" id="panel-theory">
+  <div class="card prose">
+    <h2>Formal Definition</h2>
+    <p>A <strong>weighted graph</strong> is a triple <code>G = (V, E, w)</code> where:</p>
+    <ul>
+      <li><code>V</code> is a finite set of vertices (cities):
+        <code>{ Manama, Muharraq, Isa Town, Sitra, Budaiya, Rifa, Hamad Town, Durrat Al Bahrain }</code></li>
+      <li><code>E ⊆ V × V</code> is a set of undirected edges (roads)</li>
+      <li><code>w: E → ℝ≥0</code> is a weight function assigning a non-negative real number to each edge (distance in km)</li>
+    </ul>
+
+    <p><strong>Input.</strong> A weighted graph <code>G</code>, a source vertex <code>s ∈ V</code>, a target vertex <code>t ∈ V</code>.</p>
+    <p><strong>Output.</strong> The shortest-path distance <code>d(s, t)</code> and a shortest path <code>P</code> from <code>s</code> to <code>t</code>.</p>
+
+    <h3>Algorithm Pseudocode</h3>
+<pre>
+<span class="k">function</span> <span class="n">Dijkstra</span>(G, s, t):
+    <span class="c">// dist[v]  = best known distance from s to v</span>
+    <span class="c">// prev[v]  = predecessor of v on the best known path</span>
+    <span class="c">// visited  = set of finalized vertices</span>
+
+    <span class="k">for each</span> v in V:
+        dist[v]  = ∞
+        prev[v]  = <span class="s">null</span>
+        visited[v] = <span class="s">false</span>
+
+    dist[s] = <span class="n">0</span>
+    Q = priority_queue()
+    Q.<span class="n">push</span>((<span class="n">0</span>, s))
+
+    <span class="k">while</span> Q is <span class="k">not</span> empty:
+        (d, u) = Q.<span class="n">pop</span>()        <span class="c">// smallest distance first</span>
+        <span class="k">if</span> visited[u]: <span class="k">continue</span>
+        visited[u] = <span class="s">true</span>
+        <span class="k">if</span> u == t: <span class="k">break</span>      <span class="c">// reached destination</span>
+
+        <span class="k">for each</span> (u, v, w) in G.<span class="n">edges_from</span>(u):
+            <span class="k">if not</span> visited[v]:
+                alt = dist[u] + w      <span class="c">// candidate distance</span>
+                <span class="k">if</span> alt &lt; dist[v]:
+                    dist[v] = alt
+                    prev[v] = u
+                    Q.<span class="n">push</span>((alt, v))
+
+    <span class="k">return</span> dist[t], <span class="n">reconstruct_path</span>(prev, s, t)
+</pre>
+
+    <h3>Correctness Sketch</h3>
+    <p>
+      We prove by induction on the set of visited vertices. Let <code>V<sub>k</sub></code> be the first <code>k</code>
+      vertices added to <code>visited</code>. The induction hypothesis is that for every
+      <code>v ∈ V<sub>k</sub></code>, <code>dist[v]</code> equals the true shortest distance from <code>s</code> to <code>v</code>.
+    </p>
+    <p>
+      <strong>Base.</strong> <code>V₁ = {s}</code> and <code>dist[s] = 0</code>, which is trivially the shortest distance from <code>s</code> to itself.
+    </p>
+    <p>
+      <strong>Step.</strong> Suppose the hypothesis holds. The next vertex <code>u</code> selected is the unvisited vertex with
+      minimum <code>dist[u]</code>. Any alternative path to <code>u</code> must go through an unvisited vertex with
+      distance ≥ <code>dist[u]</code>. Since all edge weights are non-negative, that path is at least
+      <code>dist[u]</code> long. Hence <code>dist[u]</code> is already optimal. ∎
+    </p>
+
+    <div class="callout">
+      <strong>Why non-negative weights?</strong> Dijkstra's correctness depends on the invariant that once we mark a vertex
+      visited, no later path through unvisited vertices can be shorter. If negative weights existed, a later path
+      could <em>decrease</em> a previously final distance — and we would need Bellman-Ford instead.
+    </div>
+
+    <h3>Complexity Analysis</h3>
+    <table>
+      <thead>
+        <tr><th>Data structure</th><th>Time complexity</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Array / linear scan</td><td class="text-mono">O(V²)</td><td>Simple, fine for dense small graphs</td></tr>
+        <tr><td>Binary heap (min-heap)</td><td class="text-mono">O((V + E) log V)</td><td>Default choice — used in this simulator</td></tr>
+        <tr><td>Fibonacci heap</td><td class="text-mono">O(E + V log V)</td><td>Theoretical optimum, rarely used in practice</td></tr>
+      </tbody>
+    </table>
+    <p>For the Bahrain network: V = 8, E = 10, so the algorithm visits at most 8 nodes and relaxes at most 10 edges — essentially instantaneous.</p>
+
+    <h3>Variants &amp; Extensions</h3>
+    <ul>
+      <li><strong>A* search</strong> — adds a heuristic to guide the search toward the target.</li>
+      <li><strong>Bidirectional Dijkstra</strong> — runs the search forward from <code>s</code> and backward from <code>t</code> simultaneously, often 2× faster in road networks.</li>
+      <li><strong>Bellman-Ford</strong> — handles negative weights, but at <code>O(VE)</code> cost.</li>
+      <li><strong>Floyd-Warshall</strong> — finds <em>all-pairs</em> shortest paths in <code>O(V³)</code>.</li>
+    </ul>
+  </div>
+</section>
+
+  <!-- ================== ABOUT PANEL ================== -->
+<section class="panel" id="panel-about">
+  <div class="card">
+    <h2>About this Simulator</h2>
+    <p class="subtitle">An educational tool for learning shortest-path algorithms</p>
+    <p style="color: var(--text-1); font-size: 14px; max-width: 800px;">
+      This interactive simulator visualizes <strong>Dijkstra's algorithm</strong> on a simplified
+      weighted graph of the <strong>Kingdom of Bahrain</strong>. It is designed for students learning
+      graph algorithms, instructors preparing lessons, and anyone curious about how navigation
+      systems find optimal routes.
+    </p>
+
+    <div class="concept-grid mt-16">
+      <div class="concept">
+        <div class="label">Use Cases</div>
+        <div class="def">Classroom teaching, self-study, technical interview prep, algorithm competitions.</div>
+      </div>
+      <div class="concept">
+        <div class="label">Features</div>
+        <div class="def">Step-by-step execution, variable speed, custom source/destination, live distance table, full path reconstruction, live statistics.</div>
+      </div>
+      <div class="concept">
+        <div class="label">Technologies</div>
+        <div class="def">Pure HTML + CSS + vanilla JavaScript. No build step, no dependencies. Runs offline once loaded.</div>
+      </div>
+      <div class="concept">
+        <div class="label">Network size</div>
+        <div class="def">8 cities, 10 roads, 2 endpoints — small enough to trace by hand, rich enough to demonstrate the greedy choice.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mt-20">
+    <h2>How to Use</h2>
+    <p class="subtitle">A 30-second tour</p>
+    <ol style="color: var(--text-1); font-size: 14px; line-height: 1.8; margin-left: 22px;">
+      <li>Go to the <strong>Visualizer</strong> tab.</li>
+      <li>Pick a <em>source</em> and <em>destination</em> city (defaults are Manama and Durrat Al Bahrain).</li>
+      <li>Choose a speed: <em>Slow</em> for learning, <em>Normal</em> for a quick run, <em>Fast</em> for impatient viewers.</li>
+      <li>Hit <strong>Start</strong> to run the algorithm in real time, or <strong>Step</strong> to advance one iteration at a time.</li>
+      <li>Watch the graph, the distance table, the statistics panel, and the step explanation update at each iteration.</li>
+      <li>When done, the optimal path lights up green with a tracer animation and the result card shows the distance, breakdown, and metrics.</li>
+      <li>Hit <strong>Reset</strong> to start over with the same cities, or change the endpoints to explore other routes.</li>
+    </ol>
+  </div>
+
+  <div class="card mt-20">
+    <h2>References</h2>
+    <p class="subtitle">Further reading</p>
+    <ul style="color: var(--text-1); font-size: 14px; line-height: 1.8; margin-left: 22px;">
+      <li>E. W. Dijkstra (1959). <em>A note on two problems in connexion with graphs.</em> Numerische Mathematik 1, 269–271.</li>
+      <li>Cormen, Leiserson, Rivest, Stein. <em>Introduction to Algorithms</em> (CLRS), Chapter 24.</li>
+      <li>Sedgewick &amp; Wayne. <em>Algorithms</em> (4th ed.), Section 4.4.</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Built for education · Dijkstra's Algorithm Simulator · Bahrain Road Network Case Study
+</footer>
+
+<!-- ================== JAVASCRIPT ================== -->
+<script>
+"use strict";
+
+/* ============================================================
+   DATA — Bahrain Road Network
+   ============================================================ */
+const CITIES = {
+  "Manama":           { x: 280, y: 220, r: 28 },
+  "Muharraq":         { x: 185, y: 110, r: 22 },
+  "Isa Town":         { x: 370, y: 300, r: 22 },
+  "Sitra":            { x: 430, y: 200, r: 22 },
+  "Budaiya":          { x: 130, y: 240, r: 20 },
+  "Rifa":             { x: 520, y: 320, r: 20 },
+  "Hamad Town":       { x: 300, y: 390, r: 20 },
+  "Durrat Al Bahrain":{ x: 660, y: 260, r: 28 }
+};
+
+const EDGES = [
+  ["Manama", "Muharraq", 6],
+  ["Manama", "Isa Town", 10],
+  ["Manama", "Sitra", 12],
+  ["Manama", "Budaiya", 14],
+  ["Isa Town", "Rifa", 6],
+  ["Isa Town", "Hamad Town", 8],
+  ["Isa Town", "Sitra", 9],
+  ["Budaiya", "Hamad Town", 10],
+  ["Sitra", "Durrat Al Bahrain", 12],
+  ["Rifa", "Durrat Al Bahrain", 18]
+];
+
+// build adjacency list
+function buildAdj() {
+  const adj = {};
+  Object.keys(CITIES).forEach(c => adj[c] = []);
+  EDGES.forEach(([a, b, w]) => {
+    adj[a].push({ to: b, w });
+    adj[b].push({ to: a, w });
+  });
+  return adj;
+}
+const ADJ = buildAdj();
+
+const CITY_ORDER = Object.keys(CITIES); // stable order
+
+function edgeId(a, b) { return [a, b].sort().join("|"); }
+function getEdgeWeight(a, b) {
+  const e = EDGES.find(e => (e[0] === a && e[1] === b) || (e[0] === b && e[1] === a));
+  return e ? e[2] : null;
+}
+
+const ALGO_INFO = {
+  complexity: "O((V+E) log V)",
+  note: "with binary heap"
+};
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const state = {
+  source: "Manama",
+  destination: "Durrat Al Bahrain",
+  distances: {},
+  previous: {},
+  visited: {},
+  currentNode: null,
+  activeEdge: null,         // { from, to } currently being evaluated
+  pathEdges: new Set(),     // edgeIds in the final optimal path
+  steps: [],                // computed step objects (precomputed for safety)
+  stepIndex: -1,
+  running: false,
+  paused: false,
+  speedMs: 700,             // ms per step
+  done: false,
+  timer: null,
+  finalDist: null,
+  finalPath: [],
+  finalOps: { relaxed: 0, pops: 0 },
+  visitedOrder: []
+};
+
+/* ============================================================
+   RENDERING — Graph
+   ============================================================ */
+const svg = document.getElementById("graphSvg");
+const edgeLayer = document.getElementById("edgeLayer");
+const nodeLayer = document.getElementById("nodeLayer");
+const tracerLayer = document.getElementById("tracerLayer");
+
+function renderGraph() {
+  edgeLayer.innerHTML = "";
+  nodeLayer.innerHTML = "";
+  tracerLayer.innerHTML = "";
+
+  // --- Edges ---
+  EDGES.forEach(([a, b, w]) => {
+    const ca = CITIES[a], cb = CITIES[b];
+    const eid = edgeId(a, b);
+    const isActive = state.activeEdge && (
+      (state.activeEdge.from === a && state.activeEdge.to === b) ||
+      (state.activeEdge.from === b && state.activeEdge.to === a)
+    );
+    const isPath = state.pathEdges.has(eid);
+
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", ca.x); line.setAttribute("y1", ca.y);
+    line.setAttribute("x2", cb.x); line.setAttribute("y2", cb.y);
+    line.setAttribute("class", "edge-line " + (
+      isPath ? "edge-path" : (isActive ? "edge-active edge-exploring" : "edge-inactive")
+    ));
+    line.dataset.id = eid;
+    edgeLayer.appendChild(line);
+
+    // label
+    const mx = (ca.x + cb.x) / 2;
+    const my = (ca.y + cb.y) / 2;
+    const dx = cb.x - ca.x, dy = cb.y - ca.y;
+    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+    const nx = -dy / len, ny = dx / len;
+    const offX = mx + nx * 4, offY = my + ny * 4;
+
+    const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    bg.setAttribute("x", offX - 13); bg.setAttribute("y", offY - 10);
+    bg.setAttribute("width", 26); bg.setAttribute("height", 18);
+    bg.setAttribute("rx", 5);
+    bg.setAttribute("class", "edge-label-bg");
+    edgeLayer.appendChild(bg);
+
+    const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    t.setAttribute("x", offX); t.setAttribute("y", offY + 4);
+    t.setAttribute("class", "edge-label");
+    t.setAttribute("fill", isPath ? "#34d399" : (isActive ? "#ff8a6c" : "#c7cde0"));
+    t.textContent = w;
+    edgeLayer.appendChild(t);
+  });
+
+  // --- Nodes ---
+  CITY_ORDER.forEach(name => {
+    const c = CITIES[name];
+    const isSource = name === state.source;
+    const isDest = name === state.destination;
+    const isCurrent = name === state.currentNode;
+    const isVisited = state.visited[name];
+
+    let cls = "node-unvisited";
+    if (isVisited && isSource) cls = "node-source node-visited-source";
+    else if (isVisited && isDest) cls = "node-destination node-visited-destination";
+    else if (isVisited) cls = "node-visited";
+    else if (isCurrent) cls = "node-current";
+    else if (isSource) cls = "node-source";
+    else if (isDest) cls = "node-destination";
+
+    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("class", isCurrent ? "pulse" : "");
+    g.dataset.name = name;
+
+    // Optional glow on the path-destination (visited end)
+    if (isPathEnd(name)) {
+      const glow = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      glow.setAttribute("cx", c.x); glow.setAttribute("cy", c.y);
+      glow.setAttribute("r", c.r);
+      glow.setAttribute("filter", "url(#glowGreen)");
+      glow.setAttribute("opacity", "0.9");
+      g.appendChild(glow);
+    }
+
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("cx", c.x); circle.setAttribute("cy", c.y);
+    circle.setAttribute("r", c.r);
+    circle.setAttribute("class", "node-circle " + cls);
+    g.appendChild(circle);
+
+    // SOURCE / DEST tag above node
+    if (isSource || isDest) {
+      const tag = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      tag.setAttribute("x", c.x);
+      tag.setAttribute("y", c.y - c.r - 6);
+      tag.setAttribute("class", "node-tag");
+      tag.setAttribute("fill", isSource ? "#60a5fa" : "#f87171");
+      tag.textContent = isSource ? "SOURCE" : "DEST";
+      g.appendChild(tag);
+    }
+
+    // City name
+    if (name === "Durrat Al Bahrain") {
+      const l1 = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      l1.setAttribute("x", c.x); l1.setAttribute("y", c.y - 2);
+      l1.setAttribute("class", "node-label");
+      l1.textContent = "Durrat";
+      g.appendChild(l1);
+      const l2 = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      l2.setAttribute("x", c.x); l2.setAttribute("y", c.y + 12);
+      l2.setAttribute("class", "node-label");
+      l2.textContent = "Al Bahrain";
+      g.appendChild(l2);
+    } else {
+      const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      label.setAttribute("x", c.x);
+      label.setAttribute("y", c.y + 4);
+      label.setAttribute("class", "node-label");
+      label.textContent = name;
+      g.appendChild(label);
+    }
+
+    // distance sublabel
+    const d = state.distances[name];
+    if (d !== undefined && d !== null) {
+      const sub = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      sub.setAttribute("x", c.x);
+      sub.setAttribute("y", c.y + c.r + 14);
+      sub.setAttribute("class", "node-sublabel");
+      sub.setAttribute("fill", isVisited ? "#34d399" : (isCurrent ? "#fbbf24" : "#8b94b3"));
+      sub.textContent = d === Infinity ? "∞" : d + " km";
+      g.appendChild(sub);
+    }
+
+    nodeLayer.appendChild(g);
+  });
+}
+
+function isPathEnd(name) {
+  // The destination gets a subtle green glow when the path has been found
+  if (!state.done && !state.pathEdges.size) return false;
+  return name === state.destination;
+}
+
+/* ============================================================
+   RENDERING — Distance table
+   ============================================================ */
+function renderTable() {
+  const tbody = document.getElementById("distTableBody");
+  tbody.innerHTML = "";
+  CITY_ORDER.forEach(name => {
+    const tr = document.createElement("tr");
+    const isSource = name === state.source;
+    const isDest = name === state.destination;
+    const isCurrent = name === state.currentNode;
+    const isVisited = state.visited[name];
+    const d = state.distances[name];
+    const p = state.previous[name];
+
+    if (isCurrent) tr.classList.add("row-current");
+    if (isVisited) tr.classList.add("row-visited");
+    if (isSource) tr.classList.add("row-source");
+    if (isDest) tr.classList.add("row-destination");
+
+    let status;
+    if (isSource) status = `<span class="pill source">SOURCE</span>`;
+    else if (isDest) status = `<span class="pill destination">DEST</span>`;
+    else if (isCurrent) status = `<span class="pill current">CURRENT</span>`;
+    else if (isVisited) status = `<span class="pill visited">VISITED</span>`;
+    else status = `<span class="pill unvisited">UNVISITED</span>`;
+
+    tr.innerHTML = `
+      <td><strong>${name}</strong></td>
+      <td class="text-mono" style="color: ${d === Infinity ? "var(--text-3)" : (isVisited ? "var(--green)" : "var(--text-0)")}">
+        ${d === Infinity ? "∞" : d + " km"}
+      </td>
+      <td class="text-mono" style="color: var(--text-2)">${p ? p : "—"}</td>
+      <td>${status}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ============================================================
+   RENDERING — Step info panel
+   ============================================================ */
+function renderStepInfo(step) {
+  const totalSteps = state.steps.length;
+  const stepNum = state.stepIndex + 1;
+
+  document.getElementById("stepNum").textContent =
+    state.done ? `${totalSteps} / ${totalSteps}` : `${Math.max(stepNum, 0)} / ${totalSteps}`;
+
+  document.getElementById("currentNode").textContent =
+    state.currentNode || "—";
+
+  const d = state.currentNode ? state.distances[state.currentNode] : null;
+  document.getElementById("currentDist").textContent =
+    d === undefined || d === null ? "—" : (d === Infinity ? "∞" : d + " km");
+
+  document.getElementById("visitedCount").textContent =
+    `${Object.values(state.visited).filter(Boolean).length} / ${CITY_ORDER.length}`;
+
+  // explanation
+  if (step) {
+    document.getElementById("explanation").innerHTML = step.explanation;
+  } else if (state.stepIndex === -1) {
+    document.getElementById("explanation").innerHTML =
+      `Press <strong>Start</strong> to run the algorithm, or <strong>Step</strong> to advance one iteration at a time.`;
+  }
+
+  // neighbors
+  const neighborList = document.getElementById("neighborList");
+  if (state.currentNode) {
+    const neighbors = ADJ[state.currentNode]
+      .filter(n => !state.visited[n.to])
+      .map(n => {
+        const dToN = state.distances[state.currentNode] + n.w;
+        const currentD = state.distances[n.to];
+        const updated = dToN < currentD;
+        return `<span class="item${updated ? ' upd' : ''}">${n.to} · ${dToN} km${updated ? ' ↓' : ''}</span>`;
+      });
+    neighborList.innerHTML = neighbors.length ? neighbors.join("") : '<span class="item mute">No unvisited neighbors</span>';
+  } else {
+    neighborList.innerHTML = '<span class="item mute">—</span>';
+  }
+
+  // priority queue = unvisited nodes with finite distance, sorted
+  const queueList = document.getElementById("queueList");
+  const queue = CITY_ORDER
+    .filter(n => !state.visited[n] && state.distances[n] !== Infinity)
+    .sort((a, b) => state.distances[a] - state.distances[b])
+    .slice(0, 8)
+    .map(n => `<span class="item">${n} · ${state.distances[n]} km</span>`);
+  queueList.innerHTML = queue.length ? queue.join("") : '<span class="item mute">Empty</span>';
+}
+
+/* ============================================================
+   RENDERING — Statistics
+   ============================================================ */
+function renderStats() {
+  const step = state.steps[state.stepIndex];
+  const ops = step && step.ops ? step.ops : state.finalOps;
+
+  document.getElementById("statVisited").textContent =
+    Object.values(state.visited).filter(Boolean).length;
+  document.getElementById("statVisitedPct").textContent = `of ${CITY_ORDER.length}`;
+
+  document.getElementById("statRelaxed").textContent = ops.relaxed;
+  document.getElementById("statPops").textContent = ops.pops;
+
+  const path = state.finalPath && state.finalPath.length ? state.finalPath : [];
+  if (path.length > 1) {
+    document.getElementById("statPathLen").textContent = path.length - 1;
+    document.getElementById("statPathCost").textContent = state.finalDist + " km";
+  } else {
+    document.getElementById("statPathLen").textContent = "—";
+    document.getElementById("statPathCost").textContent = "—";
+  }
+
+  document.getElementById("statComplexity").textContent = ALGO_INFO.complexity;
+  document.getElementById("statComplexityNote").textContent = ALGO_INFO.note;
+
+  const statusEl = document.getElementById("statStatus");
+  const statusNote = document.getElementById("statStatusNote");
+  if (state.done) {
+    statusEl.textContent = "Done";
+    statusEl.style.color = "var(--green)";
+    statusNote.textContent = `Reached ${state.destination}`;
+  } else if (state.running && !state.paused) {
+    statusEl.textContent = "Running";
+    statusEl.style.color = "var(--accent)";
+    statusNote.textContent = `step ${state.stepIndex + 1} / ${state.steps.length}`;
+  } else if (state.paused) {
+    statusEl.textContent = "Paused";
+    statusEl.style.color = "var(--yellow)";
+    statusNote.textContent = "press Space to resume";
+  } else {
+    statusEl.textContent = "Ready";
+    statusEl.style.color = "var(--yellow)";
+    statusNote.textContent = "Press Start";
+  }
+}
+
+function renderAll() {
+  renderGraph();
+  renderTable();
+  renderStepInfo(state.steps[state.stepIndex]);
+  renderStats();
+}
+
+/* ============================================================
+   PRECOMPUTE STEPS — Dijkstra with operations tracking
+   ============================================================ */
+function precomputeSteps(source, destination) {
+  const dist = {};
+  const prev = {};
+  const visited = {};
+  CITY_ORDER.forEach(c => { dist[c] = Infinity; prev[c] = null; visited[c] = false; });
+  dist[source] = 0;
+
+  const steps = [];
+  const ops = { relaxed: 0, pops: 0 };
+  const visitedOrder = [];
+
+  steps.push({
+    type: "init",
+    distances: { ...dist },
+    previous: { ...prev },
+    visited: { ...visited },
+    currentNode: null,
+    activeEdge: null,
+    explanation: `<span class="hl">Initialize</span>: set distance to <strong>${source}</strong> = 0, all other cities = ∞. Insert ${source} into the priority queue.`,
+    ops: { ...ops }
+  });
+
+  let safety = 0;
+  while (safety++ < 200) {
+    // pick unvisited node with smallest distance (extract-min)
+    let u = null, bestD = Infinity;
+    for (const c of CITY_ORDER) {
+      if (!visited[c] && dist[c] < bestD) { bestD = dist[c]; u = c; }
+    }
+    if (u === null) break;
+    ops.pops++;
+
+    const relaxations = [];
+    for (const { to: v, w } of ADJ[u]) {
+      if (visited[v]) continue;
+      ops.relaxed++;
+      const alt = dist[u] + w;
+      if (alt < dist[v]) {
+        const old = dist[v];
+        dist[v] = alt;
+        prev[v] = u;
+        relaxations.push({ from: u, to: v, weight: w, oldDist: old, newDist: alt, skipped: false });
+      } else {
+        relaxations.push({ from: u, to: v, weight: w, oldDist: dist[v], newDist: dist[v], skipped: true });
+      }
+    }
+
+    // SELECT step — extract the min, snapshot
+    steps.push({
+      type: "select",
+      distances: { ...dist },
+      previous: { ...prev },
+      visited: { ...visited },
+      currentNode: u,
+      activeEdge: null,
+      explanation: `Extract <span class="hl-yellow">${u}</span> (d=${dist[u]}) — smallest frontier. ${relaxations.length} unvisited neighbor${relaxations.length === 1 ? '' : 's'} to examine.`,
+      ops: { ...ops }
+    });
+
+    // One frame per relaxation to highlight each active edge
+    for (const r of relaxations) {
+      steps.push({
+        type: "relax",
+        distances: { ...dist },
+        previous: { ...prev },
+        visited: { ...visited },
+        currentNode: u,
+        activeEdge: { from: r.from, to: r.to },
+        explanation: r.skipped
+          ? `Examine edge <span class="hl">${r.from}→${r.to}</span> (${r.weight} km). Candidate ${r.newDist} ≥ current ${r.oldDist} → <em style="color: var(--text-3)">no update</em>.`
+          : `Examine edge <span class="hl">${r.from}→${r.to}</span> (${r.weight} km). Update <span class="hl-green">${r.to}</span>: ${r.oldDist === Infinity ? "∞" : r.oldDist} → <strong>${r.newDist}</strong> via ${r.from}.`,
+        ops: { ...ops }
+      });
+    }
+
+    visited[u] = true;
+    visitedOrder.push(u);
+
+    let markExp = `Mark <span class="hl-yellow">${u}</span> as <span class="hl-green">visited</span> (d=${dist[u]}). Distance is now final.`;
+    if (u === destination) markExp += ` <span class="hl-green">✓ Reached destination!</span>`;
+    steps.push({
+      type: "visit",
+      distances: { ...dist },
+      previous: { ...prev },
+      visited: { ...visited },
+      currentNode: null,
+      activeEdge: null,
+      explanation: markExp,
+      ops: { ...ops }
+    });
+
+    if (u === destination) break;
+  }
+
+  // build path
+  const path = [];
+  if (dist[destination] !== Infinity) {
+    let cur = destination;
+    while (cur) {
+      path.unshift(cur);
+      if (cur === source) break;
+      cur = prev[cur];
+    }
+  }
+
+  // end step
+  steps.push({
+    type: "end",
+    distances: { ...dist },
+    previous: { ...prev },
+    visited: { ...visited },
+    currentNode: null,
+    activeEdge: null,
+    explanation: dist[destination] === Infinity
+      ? `<span class="hl-red">No path exists from ${source} to ${destination}.</span>`
+      : `<span class="hl-green">Algorithm complete.</span> Shortest distance to <strong>${destination}</strong> is <strong>${dist[destination]} km</strong>.`,
+    ops: { ...ops },
+    final: true
+  });
+
+  return { steps, finalDist: dist[destination], path, ops, visitedOrder };
+}
+
+/* ============================================================
+   STEP EXECUTION
+   ============================================================ */
+function applyStep(step) {
+  state.distances = { ...step.distances };
+  state.previous = { ...step.previous };
+  state.visited = { ...step.visited };
+  state.currentNode = step.currentNode;
+  state.activeEdge = step.activeEdge || null;
+  // update visited order list
+  state.visitedOrder = Object.keys(step.visited).filter(k => step.visited[k]);
+}
+
+function showFinalResult(finalDist, path) {
+  const card = document.getElementById("resultCard");
+  document.getElementById("resultRoute").innerHTML =
+    path.map(p => `<span>${p}</span>`).join(`<span class="arrow">→</span>`);
+  document.getElementById("resultDistance").innerHTML =
+    `${finalDist} <small>km</small>`;
+
+  // breakdown
+  const breakdown = [];
+  for (let i = 0; i < path.length - 1; i++) {
+    const a = path[i], b = path[i+1];
+    const w = getEdgeWeight(a, b);
+    breakdown.push(`${a} → ${b}: <strong>${w} km</strong>`);
+  }
+  breakdown.push(`<strong style="color: var(--green)">Total: ${finalDist} km</strong>`);
+  document.getElementById("resultBreakdown").innerHTML = breakdown.join("<br>");
+
+  // order
+  const order = state.visitedOrder.length ? state.visitedOrder : Object.keys(state.visited).filter(k => state.visited[k]);
+  document.getElementById("resultOrder").innerHTML =
+    order.map((c, i) => `${i+1}. ${c}`).join("<br>") +
+    "<br><br><em style='color: var(--text-2)'>Optimal path highlighted in green above.</em>";
+
+  // metrics
+  const stepsTaken = state.steps.length;
+  document.getElementById("resultMetrics").innerHTML =
+    `Steps: <strong>${stepsTaken}</strong><br>` +
+    `Vertices: <strong>${CITY_ORDER.length}</strong><br>` +
+    `Edges: <strong>${EDGES.length}</strong><br>` +
+    `Relaxations: <strong>${state.finalOps.relaxed}</strong><br>` +
+    `Queue pops: <strong>${state.finalOps.pops}</strong><br>` +
+    `Complexity: <strong>${ALGO_INFO.complexity}</strong>`;
+
+  // mark path edges
+  state.pathEdges = new Set();
+  for (let i = 0; i < path.length - 1; i++) {
+    state.pathEdges.add(edgeId(path[i], path[i+1]));
+  }
+  // also mark path nodes as visited (in case we stopped early)
+  path.forEach(p => state.visited[p] = true);
+
+  card.classList.add("show");
+  renderGraph();
+  animatePathTraversal(path);
+}
+
+/* ============================================================
+   PATH TRACER ANIMATION
+   ============================================================ */
+function animatePathTraversal(path) {
+  if (path.length < 2) return;
+  let i = 0;
+  const stepMs = Math.max(180, state.speedMs / 4);
+  const interval = setInterval(() => {
+    if (i >= path.length - 1) { clearInterval(interval); return; }
+    const a = CITIES[path[i]], b = CITIES[path[i+1]];
+    if (!a || !b) { i++; return; }
+    // tracer dot
+    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    dot.setAttribute("cx", a.x); dot.setAttribute("cy", a.y);
+    dot.setAttribute("r", 6);
+    dot.setAttribute("class", "tracer");
+    tracerLayer.appendChild(dot);
+    let t = 0;
+    const animFrames = 14;
+    const frameInt = setInterval(() => {
+      t++;
+      const k = t / animFrames;
+      dot.setAttribute("cx", a.x + (b.x - a.x) * k);
+      dot.setAttribute("cy", a.y + (b.y - a.y) * k);
+      if (t >= animFrames) {
+        clearInterval(frameInt);
+        dot.remove();
+      }
+    }, stepMs / animFrames);
+    i++;
+  }, stepMs);
+}
+
+function reset(source, destination) {
+  clearTimeout(state.timer);
+  state.running = false;
+  state.paused = false;
+  state.stepIndex = -1;
+  state.done = false;
+  state.currentNode = null;
+  state.activeEdge = null;
+  state.pathEdges = new Set();
+  state.visitedOrder = [];
+  state.source = source;
+  state.destination = destination;
+  const { steps, finalDist, path, ops, visitedOrder } = precomputeSteps(source, destination);
+  state.steps = steps;
+  state.finalDist = finalDist;
+  state.finalPath = path;
+  state.finalOps = ops;
+  state.finalVisitedOrder = visitedOrder;
+
+  // initial state from first "init" step
+  const init = steps[0];
+  state.distances = { ...init.distances };
+  state.previous = { ...init.previous };
+  state.visited = { ...init.visited };
+
+  document.getElementById("resultCard").classList.remove("show");
+  document.getElementById("btnPauseLabel").textContent = "Pause";
+  document.getElementById("btnStartLabel").textContent = "Start";
+
+  setControls({ running: false, paused: false });
+  renderAll();
+}
+
+function setControls(opts) {
+  const { running, paused } = opts;
+  const hasSteps = state.steps.length > 0;
+  document.getElementById("btnStart").disabled = running && !paused;
+  document.getElementById("btnStartLabel").textContent = (running && !paused) ? "Running" : "Start";
+  document.getElementById("btnStep").disabled = (running && !paused) || state.done || state.stepIndex >= state.steps.length - 1;
+  document.getElementById("btnPause").disabled = !running;
+  document.getElementById("btnReset").disabled = !hasSteps && state.stepIndex === -1;
+}
+
+function start() {
+  if (state.stepIndex === -1 || state.done) {
+    if (state.done) reset(state.source, state.destination);
+  }
+  state.running = true;
+  state.paused = false;
+  document.getElementById("btnPauseLabel").textContent = "Pause";
+  setControls({ running: true, paused: false });
+  scheduleNext();
+}
+
+function pause() {
+  state.paused = !state.paused;
+  document.getElementById("btnPauseLabel").textContent = state.paused ? "Resume" : "Pause";
+  if (state.paused) {
+    clearTimeout(state.timer);
+    setControls({ running: true, paused: true });
+  } else {
+    setControls({ running: true, paused: false });
+    scheduleNext();
+  }
+}
+
+function stepForward() {
+  if (state.stepIndex === -1) reset(state.source, state.destination);
+  state.running = false;
+  state.paused = true;
+  clearTimeout(state.timer);
+  document.getElementById("btnPauseLabel").textContent = "Resume";
+  if (state.stepIndex < state.steps.length - 1) {
+    state.stepIndex++;
+    applyStep(state.steps[state.stepIndex]);
+    renderAll();
+  }
+  if (state.stepIndex === state.steps.length - 1) {
+    finish();
+  }
+  setControls({ running: false, paused: true });
+}
+
+function scheduleNext() {
+  clearTimeout(state.timer);
+  if (!state.running || state.paused) return;
+  state.timer = setTimeout(() => {
+    if (state.stepIndex < state.steps.length - 1) {
+      state.stepIndex++;
+      applyStep(state.steps[state.stepIndex]);
+      renderAll();
+      scheduleNext();
+    } else {
+      finish();
+    }
+  }, state.speedMs);
+}
+
+function finish() {
+  state.running = false;
+  state.paused = false;
+  state.done = true;
+  clearTimeout(state.timer);
+  showFinalResult(state.finalDist, state.finalPath);
+  setControls({ running: false, paused: false });
+  renderStats();
+}
+
+/* ============================================================
+   EVENT WIRING
+   ============================================================ */
+document.getElementById("btnStart").addEventListener("click", start);
+document.getElementById("btnPause").addEventListener("click", pause);
+document.getElementById("btnStep").addEventListener("click", stepForward);
+document.getElementById("btnReset").addEventListener("click", () => reset(state.source, state.destination));
+
+document.getElementById("sourceSelect").addEventListener("change", e => {
+  state.source = e.target.value;
+  if (state.source === state.destination) {
+    state.destination = CITY_ORDER.find(c => c !== state.source);
+    document.getElementById("destSelect").value = state.destination;
+  }
+  reset(state.source, state.destination);
+});
+document.getElementById("destSelect").addEventListener("change", e => {
+  state.destination = e.target.value;
+  if (state.destination === state.source) {
+    state.source = CITY_ORDER.find(c => c !== state.destination);
+    document.getElementById("sourceSelect").value = state.source;
+  }
+  reset(state.source, state.destination);
+});
+
+document.getElementById("speedRange").addEventListener("input", e => {
+  const v = +e.target.value;
+  const map = { 1: "Very slow", 2: "Slow", 3: "Normal", 4: "Fast", 5: "Very fast" };
+  const ms = { 1: 1700, 2: 1100, 3: 700, 4: 380, 5: 180 };
+  document.getElementById("speedLabel").textContent = map[v];
+  state.speedMs = ms[v];
+});
+
+/* Keyboard shortcuts */
+document.addEventListener("keydown", e => {
+  // ignore when typing in selects/inputs
+  const tag = (e.target && e.target.tagName) || "";
+  if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+  if (e.code === "Space") {
+    e.preventDefault();
+    if (state.running || state.paused) pause();
+    else if (state.stepIndex < state.steps.length - 1) start();
+  } else if (e.key === "ArrowRight" || e.code === "ArrowRight") {
+    e.preventDefault();
+    if (!document.getElementById("btnStep").disabled) stepForward();
+  } else if (e.key === "r" || e.key === "R") {
+    e.preventDefault();
+    reset(state.source, state.destination);
+  }
+});
+
+/* Tabs */
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById("panel-" + tab.dataset.tab).classList.add("active");
+  });
+});
+
+/* ============================================================
+   INITIALIZE
+   ============================================================ */
+state.speedMs = 700; // default Normal
+reset(state.source, state.destination);
+</script>
+</body>
+</html>
